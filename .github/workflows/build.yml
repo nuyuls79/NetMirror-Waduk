@@ -15,47 +15,35 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      # Step 1: Checkout your repo
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           path: src
 
-      # Step 2: Prepare builds folder
-      - name: Prepare builds folder
-        run: mkdir -p $GITHUB_WORKSPACE/builds
-
-      # Step 3: Setup JDK 17 (needed for Gradle)
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # Step 4: Setup Android SDK (required by your Gradle build)
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Step 5: Add secrets to local.properties
       - name: Add Secrets
         env:
           CONSUMET_API: ${{ secrets.CONSUMET_API }}
           BYPASS_API: ${{ secrets.BYPASS_API }}
           SIMKL_API: ${{ secrets.SIMKL_API }}
-          MOVIEBOX_SECRET_KEY_DEFAULT: ${{ secrets.MOVIEBOX_SECRET_KEY_DEFAULT }}
-          MOVIEBOX_SECRET_KEY_ALT: ${{ secrets.MOVIEBOX_SECRET_KEY_ALT }}
-          CASTLE_SUFFIX: ${{ secrets.CASTLE_SUFFIX }}
-          CRICIFY_PROVIDER_SECRET: ${{ secrets.CRICIFY_PROVIDER_SECRET }}
         run: |
-          cd $GITHUB_WORKSPACE/src
-          echo CONSUMET_API=$CONSUMET_API >> local.properties
-          echo BYPASS_API=$BYPASS_API >> local.properties
-          echo SIMKL_API=$SIMKL_API >> local.properties
+          cd src
+          echo "CONSUMET_API=$CONSUMET_API" >> local.properties
+          echo "BYPASS_API=$BYPASS_API" >> local.properties
+          echo "SIMKL_API=$SIMKL_API" >> local.properties
 
-      # Step 6: Build Plugins
       - name: Build Plugins
         env:
           MOVIEBOX_SECRET_KEY_DEFAULT: ${{ secrets.MOVIEBOX_SECRET_KEY_DEFAULT }}
@@ -63,63 +51,31 @@ jobs:
           CASTLE_SUFFIX: ${{ secrets.CASTLE_SUFFIX }}
           CRICIFY_PROVIDER_SECRET: ${{ secrets.CRICIFY_PROVIDER_SECRET }}
         run: |
-          cd $GITHUB_WORKSPACE/src
+          cd src
           chmod +x gradlew
           ./gradlew make makePluginsJson
-          mkdir -p $GITHUB_WORKSPACE/builds
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds || true
-          cp build/plugins.json $GITHUB_WORKSPACE/builds || true
 
-      # Step 7: Push generated files back to GitHub (optional)
-      - name: Push builds
+      - name: Checkout builds branch
+        uses: actions/checkout@v4
+        with:
+          ref: builds
+          path: builds
+
+      - name: Copy build files
         run: |
-          cd $GITHUB_WORKSPACE/builds
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add .
-          git commit --amend -m "Build $GITHUB_SHA" || exit 0
-          git push --force
+          cd src
+          find . -name "*.cs3" -exec cp {} ../builds/ \;
+          cp build/plugins.json ../builds/ 2>/dev/null || echo "plugins.json not found, skipping"
 
-      # Step 4: Setup Android SDK
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      # Step 5: Add secrets to local.properties
-      - name: Access Secrets
-        env:
-          CONSUMET_API: ${{ secrets.CONSUMET_API }}
-          BYPASS_API: ${{ secrets.BYPASS_API }}
-          SIMKL_API: ${{ secrets.SIMKL_API }}
-          MOVIEBOX_SECRET_KEY_DEFAULT: ${{ secrets.MOVIEBOX_SECRET_KEY_DEFAULT }}
-          MOVIEBOX_SECRET_KEY_ALT: ${{ secrets.MOVIEBOX_SECRET_KEY_ALT }}
-          CASTLE_SUFFIX: ${{ secrets.CASTLE_SUFFIX }}
-          CRICIFY_PROVIDER_SECRET: ${{ secrets.CRICIFY_PROVIDER_SECRET }}
+      - name: Commit and push to builds branch
         run: |
-          cd $GITHUB_WORKSPACE/src
-          echo CONSUMET_API=$CONSUMET_API >> local.properties
-          echo BYPASS_API=$BYPASS_API >> local.properties
-          echo SIMKL_API=$SIMKL_API >> local.properties
-
-      # Step 6: Build Plugins
-      - name: Build Plugins
-        env:
-          MOVIEBOX_SECRET_KEY_DEFAULT: ${{ secrets.MOVIEBOX_SECRET_KEY_DEFAULT }}
-          MOVIEBOX_SECRET_KEY_ALT: ${{ secrets.MOVIEBOX_SECRET_KEY_ALT }}
-          CASTLE_SUFFIX: ${{ secrets.CASTLE_SUFFIX }}
-          CRICIFY_PROVIDER_SECRET: ${{ secrets.CRICIFY_PROVIDER_SECRET }}
-        run: |
-          cd $GITHUB_WORKSPACE/src
-          chmod +x gradlew
-          ./gradlew make makePluginsJson
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds || true
-          cp build/plugins.json $GITHUB_WORKSPACE/builds || true
-
-      # Step 7: Push builds back to GitHub (optional)
-      - name: Push builds
-        run: |
-          cd $GITHUB_WORKSPACE/builds
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
-          git add .
-          git commit --amend -m "Build $GITHUB_SHA" || exit 0
-          git push --force
+          cd builds
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Build from ${{ github.sha }}"
+            git push
+          fi
