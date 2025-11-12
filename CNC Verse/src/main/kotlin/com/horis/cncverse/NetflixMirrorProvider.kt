@@ -142,7 +142,10 @@ class NetflixMirrorProvider : MainAPI() {
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             ?: emptyList())
-        val rating = data.match?.replace("IMDb ", "")?.toRatingInt()
+        
+        // FIXED: Use new score API instead of deprecated toRatingInt()
+        val score = data.match?.replace("IMDb ", "")?.toFloatOrNull()?.times(1000)?.toInt()
+        
         val runTime = convertRuntimeToMinutes(data.runtime.toString())
 
         if (data.episodes.first() == null) {
@@ -179,7 +182,8 @@ class NetflixMirrorProvider : MainAPI() {
             year = data.year.toIntOrNull()
             tags = genre
             actors = cast
-            this.rating = rating
+            // FIXED: Use new score property instead of deprecated rating
+            this.score = score
             this.duration = runTime
         }
     }
