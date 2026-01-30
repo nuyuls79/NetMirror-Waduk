@@ -57,10 +57,10 @@ class NetflixMirrorProvider : MainAPI() {
             "hd" to "on"
         )
         val document = app.get(
-            "$newUrl/home",
+            "$mainUrl/home",
             headers = headers,
             cookies = cookies,
-            referer = newUrl,
+            referer = "$mainUrl/",
         ).document
         val items = document.select(".tray-container, #top10, .lolomoRow").map {
             it.toHomePageList()
@@ -70,27 +70,20 @@ class NetflixMirrorProvider : MainAPI() {
 
     private fun Element.toHomePageList(): HomePageList {
         val name = select("h2, span").text()
-        val items = select("article, .top10-post").mapNotNull {
+        val items = select("article, .top10-post, img.lazy").mapNotNull {
             it.toSearchResult()
         }
         return HomePageList(name, items)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val id = attr("data-post").takeIf { it.isNotEmpty() }
-            ?: run {
-                val imgSrc = selectFirst("img")?.attr("data-src") ?: selectFirst("img")?.attr("src") ?: ""
-                imgSrc.substringAfterLast("/").substringBefore(".")
-            }
-        
-        if (id.isEmpty()) return null
-        
+        val id = attr("data-src").substringAfterLast("/").substringBefore(".")
         val posterUrl = "https://imgcdn.kim/poster/v/${id}.jpg"
         val title = selectFirst("img")?.attr("alt") ?: ""
 
         return newAnimeSearchResponse(title, Id(id).toJson()) {
             this.posterUrl = posterUrl
-            posterHeaders = mapOf("Referer" to "$mainUrl/tv/home")
+            posterHeaders = mapOf("Referer" to "$mainUrl/home")
         }
     }
 
@@ -111,7 +104,7 @@ class NetflixMirrorProvider : MainAPI() {
         return data.searchResult.map {
             newAnimeSearchResponse(it.t, Id(it.id).toJson()) {
                 posterUrl = "https://img.nfmirrorcdn.top/poster/v/${it.id}.jpg"
-                posterHeaders = mapOf("Referer" to "$mainUrl/tv/home")
+                posterHeaders = mapOf("Referer" to "$mainUrl/home")
             }
         }
     }
@@ -234,7 +227,7 @@ class NetflixMirrorProvider : MainAPI() {
         val playlist = app.get(
             "https://net51.cc/tv/playlist.php?id=$id&t=$title&tm=${APIHolder.unixTime}",
             headers,
-            referer = "$mainUrl/tv/home",
+            referer = "$mainUrl/home",
             cookies = cookies
         ).parsed<PlayList>()
 
@@ -249,6 +242,13 @@ class NetflixMirrorProvider : MainAPI() {
                     ) {
                         this.referer = "https://net51.cc/"
                         this.quality = getQualityFromName(it.file.substringAfter("q=", ""))
+                        this.headers = mapOf(
+                            "User-Agent" to "Mozilla/5.0 (Android) ExoPlayer",
+                            "Accept" to "*/*",
+                            "Accept-Encoding" to "identity",
+                            "Connection" to "keep-alive",
+                            "Cookie" to "hd=on"
+                        )
                     }
                 )
             }
