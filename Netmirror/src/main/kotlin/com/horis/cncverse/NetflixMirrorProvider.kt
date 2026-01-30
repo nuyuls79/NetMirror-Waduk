@@ -49,7 +49,7 @@ class NetflixMirrorProvider : MainAPI() {
             referer = "$mainUrl/",  
         ).document  
         // .tray-container, #top10,   
-        val items = document.select(".tray-container, #top10").map {  
+        val items = document.select(".tray-container, #top10, .lolomo, .lolomoRow, #bodyPage, .ltr-0, .lolomoRow_title_card").map {  
             it.toHomePageList()  
         }  
         return newHomePageResponse(items, false)  
@@ -58,7 +58,7 @@ class NetflixMirrorProvider : MainAPI() {
     private fun Element.toHomePageList(): HomePageList {  
         val name = select("h2, span").text()  
         //article, .top10-post  
-        val items = select("article, .top10-post").mapNotNull {  
+        val items = select("article, .top10-post, .lolomoRow, .lolomoRow_title_card, img.lazy").mapNotNull {  
             it.toSearchResult()  
         }  
         return HomePageList(name, items)  
