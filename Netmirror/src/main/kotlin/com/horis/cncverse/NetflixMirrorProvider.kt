@@ -230,21 +230,24 @@ class NetflixMirrorProvider : MainAPI() {
     playlist.forEach {
       item ->
       item.sources.forEach {
+        source ->
         callback.invoke(
           newExtractorLink(
             name,
-            it.label,
-            newUrl + it.file,
+            source.label ?: name,
+            newUrl + source.file,
             type = ExtractorLinkType.M3U8
           ) {
             this.referer = "$newUrl/"
-            this.quality = getQualityFromName(it.file.substringAfter("q=", ""))
+            this.quality = getQualityFromName(source.file.substringAfter("q=", "").substringBefore("&"))
             this.headers = mapOf(
-              "User-Agent" to "Mozilla/5.0 (Android) ExoPlayer",
+              "User-Agent" to "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36",
               "Accept" to "*/*",
               "Accept-Encoding" to "identity",
               "Connection" to "keep-alive",
-              "Cookie" to "hd=on"
+              "Origin" to newUrl,
+              "Referer" to "$newUrl/",
+              "Cookie" to "hd=on; t_hash_t=$cookie_value; ott=nf"
             )
           }
         )
@@ -252,7 +255,7 @@ class NetflixMirrorProvider : MainAPI() {
 
       item.tracks?.filter {
         it.kind == "captions"
-      }?.map {
+      }?.forEach {
         track ->
         subtitleCallback.invoke(
           SubtitleFile(
