@@ -220,8 +220,10 @@ class NetflixMirrorProvider : MainAPI() {
       "ott" to "nf",
       "hd" to "on"
     )
+
+    val token = getVideoToken(mainUrl, newUrl, id, cookies)
     val playlist = app.get(
-      "$newUrl/playlist.php?id=$id&t=$title&tm=${APIHolder.unixTime}",
+      "$newUrl/playlist.php?id=$id&t=$title&tm=${APIHolder.unixTime}&h=$token",
       headers,
       referer = "$newUrl/",
       cookies = cookies
@@ -230,24 +232,20 @@ class NetflixMirrorProvider : MainAPI() {
     playlist.forEach {
       item ->
       item.sources.forEach {
-        source ->
         callback.invoke(
           newExtractorLink(
             name,
-            source.label ?: name,
-            newUrl + source.file,
+            it.label,
+            newUrl + it.file,
             type = ExtractorLinkType.M3U8
           ) {
             this.referer = "$newUrl/"
-            this.quality = getQualityFromName(source.file.substringAfter("q=", "").substringBefore("&"))
             this.headers = mapOf(
-              "User-Agent" to "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36",
+              "User-Agent" to "Mozilla/5.0 (Android) ExoPlayer",
               "Accept" to "*/*",
               "Accept-Encoding" to "identity",
               "Connection" to "keep-alive",
-              "Origin" to newUrl,
-              "Referer" to "$newUrl/",
-              "Cookie" to "hd=on; t_hash_t=$cookie_value; ott=nf"
+              "Cookie" to "hd=on"
             )
           }
         )
@@ -255,13 +253,17 @@ class NetflixMirrorProvider : MainAPI() {
 
       item.tracks?.filter {
         it.kind == "captions"
-      }?.forEach {
+      }?.map {
         track ->
         subtitleCallback.invoke(
-          SubtitleFile(
+          newSubtitleFile(
             track.label.toString(),
-            httpsify(track.file.toString())
-          )
+            httpsify(track.file.toString().replace("\\", "")),
+          ) {
+            this.headers = mapOf(
+              "Referer" to "$newUrl/"
+            )
+          }
         )
       }
     }
