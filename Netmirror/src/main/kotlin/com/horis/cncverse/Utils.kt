@@ -108,3 +108,11 @@ suspend fun bypass(mainUrl: String): String {
     }
     return newCookie
 }
+
+suspend fun getVideoToken(mainUrl: String, newUrl: String, id: String, cookies: Map<String, String>): String {
+    val requestBody = FormBody.Builder().add("id", id).build()
+    val json = app.post("$mainUrl/play.php", cookies = cookies, requestBody = requestBody).text
+    val h = JSONObject(json).getString("h")
+    val token = app.get("$newUrl/play.php?id=$id&$h").document.select("body").attr("data-h")
+    return token
+}
