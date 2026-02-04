@@ -27,7 +27,7 @@ class NetflixMirrorProvider : MainAPI() {
   )
   override var lang = "hi"
 
-  override var mainUrl = "https://net20.cc"
+  override var mainUrl = "https://net22.cc"
   private var newUrl = "https://net52.cc"
   override var name = "Netflix"
 
@@ -223,9 +223,9 @@ class NetflixMirrorProvider : MainAPI() {
 
     val token = getVideoToken(mainUrl, newUrl, id, cookies)
     val playlist = app.get(
-      "$newUrl/playlist.php?id=$id&t=$title&tm=${APIHolder.unixTime}&h=$token",
+      "$newUrl/playlist.php?id=$id&t=$title&h=$token&tm=${APIHolder.unixTime}",
       headers,
-      referer = "$newUrl/",
+      referer = "$mainUrl/",
       cookies = cookies
     ).parsed<PlayList>()
 
