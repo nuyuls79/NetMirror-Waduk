@@ -108,7 +108,7 @@ class NetflixMirrorProvider : MainAPI() {
       "hd" to "on"
     )
     val data = app.get(
-      "$mainUrl/post.php?id=$id&in=${APIHolder.unixTime}",
+      "$newUrl/post.php?id=$id&t=${APIHolder.unixTime}",
       headers,
       referer = "$mainUrl/tv/home",
       cookies = cookies
@@ -188,9 +188,9 @@ class NetflixMirrorProvider : MainAPI() {
     var pg = page
     while (true) {
       val data = app.get(
-        "https://net51.cc/episodes.php?s=$sid&series=$eid&t=${APIHolder.unixTime}&page=$pg",
+        "$newUrl/episodes.php?s=$sid&series=$eid&t=${APIHolder.unixTime}&page=$pg",
         headers,
-        referer = "https://net51.cc/tv/home",
+        referer = "$newUrl/tv/home",
         cookies = cookies
       ).parsed<EpisodesData>()
       data.episodes?.mapTo(episodes) {
